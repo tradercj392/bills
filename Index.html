@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Household Bills</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#E7ECEB; --surface:#FFFFFF; --ink:#15242B; --muted:#5E6E74;
+    --line:#DCE4E3; --brand:#125A60; --brand-deep:#0E484D; --brand-soft:#E2EEEE;
+    --paid:#2E7D52; --paid-soft:#E6F1EA;
+    --soon:#9C6411; --soon-soft:#F8EEDB;
+    --over:#A93B36; --over-soft:#F6E3E1;
+    --shadow:0 1px 2px rgba(20,40,45,.06), 0 8px 24px rgba(20,40,45,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  body{padding-bottom:96px}
+  .num{font-family:'Space Grotesk',sans-serif;font-feature-settings:"tnum" 1;letter-spacing:-.01em}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+
+  /* Header */
+  header{background:linear-gradient(160deg,var(--brand) 0%,var(--brand-deep) 100%);color:#fff;padding:22px 18px 26px;border-radius:0 0 22px 22px}
+  .head-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  header h1{font-family:'Space Grotesk',sans-serif;font-size:1.45rem;font-weight:700;letter-spacing:-.02em}
+  header .month{font-size:.82rem;opacity:.85;font-weight:500}
+  .summary{margin-top:18px}
+  .summary .big{display:flex;align-items:baseline;gap:8px}
+  .summary .big .amt{font-family:'Space Grotesk',sans-serif;font-size:2.3rem;font-weight:700;letter-spacing:-.03em}
+  .summary .big .lbl{font-size:.8rem;opacity:.85}
+  .bar{margin-top:14px;height:10px;border-radius:6px;background:rgba(255,255,255,.18);overflow:hidden;display:flex}
+  .bar i{display:block;height:100%;background:#7FD6A6;transition:width .4s ease}
+  .bar-legend{display:flex;justify-content:space-between;margin-top:8px;font-size:.74rem;opacity:.9}
+  .behind{display:flex;align-items:center;gap:7px;margin-top:12px;padding:8px 11px;border-radius:11px;background:rgba(255,255,255,.14);font-size:.82rem;font-weight:600}
+  .behind svg{width:16px;height:16px;flex:0 0 auto;color:#FFD9A3}
+  .behind .num{font-weight:700}
+  .sync{margin-top:6px;font-size:.72rem;font-weight:600;opacity:.9;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+  .sync::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor}
+  .sync.s-ok{color:#9FE9C0} .sync.s-load{color:#FFE3AE} .sync.s-err{color:#FFB4AE}
+
+  /* Filters */
+  .wrap{max-width:560px;margin:0 auto;padding:0 14px}
+  .filters{display:flex;gap:7px;margin:16px 0 4px;overflow-x:auto;scrollbar-width:none}
+  .filters::-webkit-scrollbar{display:none}
+  .chip{flex:0 0 auto;padding:8px 14px;border-radius:20px;background:var(--surface);border:1px solid var(--line);font-size:.82rem;font-weight:500;color:var(--muted);white-space:nowrap}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .chip .c{font-family:'Space Grotesk';margin-left:5px;font-size:.78rem;opacity:.7}
+  .chip.on .c{opacity:.9}
+
+  /* Bill list */
+  .list{margin-top:12px;display:flex;flex-direction:column;gap:10px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow);display:flex;gap:12px;align-items:flex-start}
+  .check{flex:0 0 auto;width:26px;height:26px;border-radius:9px;border:2px solid var(--line);margin-top:2px;display:grid;place-items:center;transition:.15s;background:#fff}
+  .check svg{width:15px;height:15px;opacity:0;transform:scale(.5);transition:.15s}
+  .card.paid .check{background:var(--paid);border-color:var(--paid)}
+  .card.paid .check svg{opacity:1;transform:scale(1)}
+  .body{flex:1;min-width:0}
+  .l1{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .name{font-weight:600;font-size:1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .card.paid .name{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line)}
+  .amount{font-family:'Space Grotesk';font-weight:700;font-size:1.05rem;flex:0 0 auto}
+  .l2{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
+  .tag{font-size:.72rem;font-weight:600;padding:3px 9px;border-radius:7px;background:var(--brand-soft);color:var(--brand-deep)}
+  .due{font-size:.78rem;color:var(--muted);font-weight:500}
+  .due.soon{color:var(--soon)} .due.over{color:var(--over);font-weight:600}
+  .pill{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:6px}
+  .pill.over{background:var(--over-soft);color:var(--over)}
+  .pill.soon{background:var(--soon-soft);color:var(--soon)}
+  .pill.repeat{background:#EEF1F2;color:var(--muted)}
+  .pill.carried{background:#3A2A12;color:#FFD9A3}
+  .notes{font-size:.82rem;color:var(--muted);margin-top:7px;line-height:1.4}
+  .row-actions{display:flex;gap:14px;margin-top:10px}
+  .row-actions button{font-size:.78rem;font-weight:600;color:var(--muted)}
+  .row-actions button.del{color:var(--over)}
+
+  /* Empty + loading */
+  .empty{text-align:center;padding:54px 20px;color:var(--muted)}
+  .empty .ic{font-size:2.4rem}
+  .empty h3{font-family:'Space Grotesk';color:var(--ink);margin:10px 0 6px;font-size:1.1rem}
+  .empty p{font-size:.9rem;line-height:1.5}
+
+  /* FAB */
+  .fab{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:var(--brand);color:#fff;font-weight:600;font-size:.95rem;padding:14px 22px;border-radius:30px;box-shadow:0 8px 24px rgba(14,72,77,.35);display:flex;align-items:center;gap:8px;z-index:20}
+  .fab svg{width:18px;height:18px}
+
+  /* Modal */
+  .overlay{position:fixed;inset:0;background:rgba(18,30,35,.45);display:none;align-items:flex-end;justify-content:center;z-index:40;backdrop-filter:blur(2px)}
+  .overlay.show{display:flex}
+  .sheet{background:var(--bg);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:20px 18px 24px;max-height:92vh;overflow-y:auto;animation:up .25s ease}
+  @keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:translateY(0);opacity:1}}
+  .sheet h2{font-family:'Space Grotesk';font-size:1.2rem;margin-bottom:16px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:6px}
+  .field input,.field select,.field textarea{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:11px;background:var(--surface);font-family:inherit;font-size:1rem;color:var(--ink)}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+  .field textarea{resize:vertical;min-height:60px}
+  .two{display:flex;gap:11px}.two>*{flex:1}
+  .sheet-actions{display:flex;gap:10px;margin-top:8px}
+  .btn{flex:1;padding:14px;border-radius:13px;font-weight:600;font-size:.95rem;text-align:center}
+  .btn.primary{background:var(--brand);color:#fff}
+  .btn.ghost{background:var(--surface);border:1px solid var(--line);color:var(--ink)}
+  .amount-input{position:relative}
+  .amount-input span{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);font-family:'Space Grotesk';font-weight:600}
+  .amount-input input{padding-left:28px;font-family:'Space Grotesk';font-weight:600}
+</style>
+</head>
+<body>
+  <header>
+    <div class="wrap" style="padding:0">
+      <div class="head-row">
+        <h1>Household Bills</h1>
+        <span class="month" id="monthLabel"></span>
+      </div>
+      <div class="sync s-load" id="sync" onclick="refresh()">Syncing…</div>
+      <div class="summary">
+        <div class="big">
+          <span class="amt num" id="dueAmt">$0</span>
+          <span class="lbl">still to pay</span>
+        </div>
+        <div class="bar"><i id="paidBar" style="width:0%"></i></div>
+        <div class="bar-legend">
+          <span id="paidLeg">$0 paid</span>
+          <span id="countLeg">0 bills</span>
+        </div>
+        <div class="behind" id="behindLine" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+          <span id="behindText"></span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="filters" id="filters">
+      <button class="chip on" data-f="all">All <span class="c" id="cAll">0</span></button>
+      <button class="chip" data-f="unpaid">Unpaid <span class="c" id="cUnpaid">0</span></button>
+      <button class="chip" data-f="overdue">Overdue <span class="c" id="cOver">0</span></button>
+      <button class="chip" data-f="carried">Carried over <span class="c" id="cCarried">0</span></button>
+      <button class="chip" data-f="paid">Paid <span class="c" id="cPaid">0</span></button>
+    </div>
+    <div class="list" id="list"></div>
+  </div>
+
+  <button class="fab" id="addBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    Add a bill
+  </button>
+
+  <div class="overlay" id="overlay">
+    <div class="sheet">
+      <h2 id="sheetTitle">Add a bill</h2>
+      <div class="field">
+        <label for="fName">Bill name</label>
+        <input id="fName" placeholder="e.g. Electricity" autocomplete="off">
+      </div>
+      <div class="two">
+        <div class="field amount-input">
+          <label for="fAmount">Amount</label>
+          <span>$</span><input id="fAmount" type="number" inputmode="decimal" placeholder="0.00" step="0.01">
+        </div>
+        <div class="field">
+          <label for="fDue">Due date</label>
+          <input id="fDue" type="date">
+        </div>
+      </div>
+      <div class="two">
+        <div class="field">
+          <label for="fCat">Category</label>
+          <select id="fCat">
+            <option>Housing</option><option>Utilities</option><option>Internet &amp; Phone</option>
+            <option>Insurance</option><option>Subscriptions</option><option>Loans &amp; Credit</option>
+            <option>Transport</option><option>Groceries</option><option>Health</option><option>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fRepeat">Repeats</label>
+          <select id="fRepeat">
+            <option value="once">One-time</option><option value="weekly">Weekly</option>
+            <option value="monthly" selected>Monthly</option><option value="yearly">Yearly</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="fNotes">Notes <span style="font-weight:400">(account #, who pays, etc.)</span></label>
+        <textarea id="fNotes" placeholder="Optional"></textarea>
+      </div>
+      <div class="sheet-actions">
+        <button class="btn ghost" id="cancelBtn">Cancel</button>
+        <button class="btn primary" id="saveBtn">Save bill</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+// === Google Sheet backend ===
+const API_URL = "https://script.google.com/macros/s/AKfycbwfhJbnrw26LIJf4WQSjy1ycltL2FzYbqZqsFeBenMzIPcLpkOSknPOOVdZSFA8Sm8rhQ/exec";
+
+let bills=[];
+let filter='all';
+let editId=null;
+let syncing=false;
+
+function setSync(state){
+  const el=document.getElementById('sync'); if(!el) return;
+  const map={loading:['Syncing…','s-load'],saving:['Saving…','s-load'],saved:['All changes saved','s-ok'],error:['Offline — tap to retry','s-err']};
+  const [txt,cls]=map[state]||map.saved;
+  el.textContent=txt; el.className='sync '+cls;
+}
+async function apiGet(){
+  const r=await fetch(API_URL,{method:'GET'});
+  const d=await r.json();
+  return Array.isArray(d.bills)?d.bills:[];
+}
+async function apiPost(){
+  syncing=true; setSync('saving');
+  try{
+    await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({bills})});
+    setSync('saved');
+  }catch(e){ setSync('error'); }
+  syncing=false;
+}
+async function refresh(){
+  if(syncing) return;
+  try{ bills=await apiGet(); render(); setSync('saved'); }catch(e){ setSync('error'); }
+}
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) refresh(); });
+window.addEventListener('focus',refresh);
+
+const fmt=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2});
+const money=n=>fmt.format(n||0).replace(/\.00$/,'');
+const $=id=>document.getElementById(id);
+
+function todayMid(){const d=new Date();d.setHours(0,0,0,0);return d;}
+function dueState(b){
+  if(b.paid) return 'paid';
+  if(!b.due) return 'none';
+  const d=new Date(b.due+'T00:00:00'); const t=todayMid();
+  const days=Math.round((d-t)/86400000);
+  if(days<0) return 'over';
+  if(days<=7) return 'soon';
+  return 'ok';
+}
+// true if an unpaid bill's due date falls in an earlier calendar month than now
+function isCarriedOver(b){
+  if(b.paid||!b.due) return false;
+  const d=new Date(b.due+'T00:00:00'); const n=new Date();
+  return (d.getFullYear()*12+d.getMonth()) < (n.getFullYear()*12+n.getMonth());
+}
+function overdueText(days){
+  if(days<30) return days+(days===1?' day':' days')+' overdue';
+  const months=Math.floor(days/30); const rem=days%30;
+  let s=months+(months===1?' month':' months');
+  if(rem>0) s+=' '+rem+(rem===1?' day':' days');
+  return s+' overdue';
+}
+function dueText(b){
+  if(!b.due) return 'No due date';
+  const d=new Date(b.due+'T00:00:00'); const t=todayMid();
+  const days=Math.round((d-t)/86400000);
+  const nice=d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  if(b.paid) return 'Paid · was due '+nice;
+  if(days<0) return overdueText(Math.abs(days));
+  if(days===0) return 'Due today';
+  if(days===1) return 'Due tomorrow';
+  if(days<=7) return 'Due in '+days+' days';
+  return 'Due '+nice;
+}
+
+async function load(){
+  setSync('loading');
+  try{ bills=await apiGet(); setSync('saved'); }
+  catch(e){ bills=[]; setSync('error'); }
+  render();
+}
+async function save(){ await apiPost(); }
+
+function render(){
+  const now=new Date();
+  $('monthLabel').textContent=now.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+
+  const unpaid=bills.filter(b=>!b.paid);
+  const paid=bills.filter(b=>b.paid);
+  const over=bills.filter(b=>dueState(b)==='over');
+  const dueTotal=unpaid.reduce((s,b)=>s+(+b.amount||0),0);
+  const paidTotal=paid.reduce((s,b)=>s+(+b.amount||0),0);
+  const grand=dueTotal+paidTotal;
+
+  $('dueAmt').textContent=money(dueTotal);
+  $('paidLeg').textContent=money(paidTotal)+' paid';
+  $('countLeg').textContent=bills.length+(bills.length===1?' bill':' bills');
+  $('paidBar').style.width=(grand>0?(paidTotal/grand*100):0)+'%';
+
+  const carried=bills.filter(isCarriedOver);
+  const carriedTotal=carried.reduce((s,b)=>s+(+b.amount||0),0);
+  const behind=$('behindLine');
+  if(carried.length>0){
+    behind.style.display='flex';
+    $('behindText').innerHTML='Behind from earlier months: <span class="num">'+money(carriedTotal)+'</span> · '+carried.length+(carried.length===1?' bill':' bills');
+  }else{
+    behind.style.display='none';
+  }
+
+  $('cAll').textContent=bills.length;
+  $('cUnpaid').textContent=unpaid.length;
+  $('cOver').textContent=over.length;
+  $('cPaid').textContent=paid.length;
+  $('cCarried').textContent=carried.length;
+
+  let items=bills.slice();
+  if(filter==='unpaid') items=unpaid;
+  else if(filter==='paid') items=paid;
+  else if(filter==='overdue') items=over;
+  else if(filter==='carried') items=carried;
+
+  items.sort((a,b)=>{
+    if(a.paid!==b.paid) return a.paid?1:-1;
+    if(!a.due) return 1; if(!b.due) return -1;
+    return a.due.localeCompare(b.due);
+  });
+
+  const list=$('list');
+  if(items.length===0){
+    list.innerHTML=`<div class="empty"><div class="ic">📋</div>
+      <h3>${bills.length===0?'No bills yet':'Nothing here'}</h3>
+      <p>${bills.length===0?'Tap “Add a bill” to start tracking what you owe and what’s paid.':'No bills match this filter.'}</p></div>`;
+    return;
+  }
+
+  list.innerHTML=items.map(b=>{
+    const st=dueState(b);
+    const dueCls=st==='over'?'over':st==='soon'?'soon':'';
+    let pill='';
+    if(st==='over') pill='<span class="pill over">Overdue</span>';
+    else if(st==='soon') pill='<span class="pill soon">Due soon</span>';
+    const carriedBadge=isCarriedOver(b)?'<span class="pill carried">Carried over</span>':'';
+    const repeat=b.repeat&&b.repeat!=='once'?`<span class="pill repeat">↻ ${b.repeat}</span>`:'';
+    return `<div class="card ${b.paid?'paid':''}" data-id="${b.id}">
+      <button class="check" data-act="toggle" aria-label="Mark paid">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+      </button>
+      <div class="body">
+        <div class="l1"><span class="name">${esc(b.name)}</span><span class="amount num">${money(b.amount)}</span></div>
+        <div class="l2">
+          <span class="tag">${esc(b.category||'Other')}</span>
+          <span class="due ${dueCls}">${dueText(b)}</span>
+          ${pill}${carriedBadge}${repeat}
+        </div>
+        ${b.notes?`<div class="notes">${esc(b.notes)}</div>`:''}
+        <div class="row-actions">
+          <button data-act="toggle">${b.paid?'Mark unpaid':'Mark paid'}</button>
+          <button data-act="edit">Edit</button>
+          <button data-act="del" class="del">Delete</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+// Events
+$('filters').addEventListener('click',e=>{
+  const c=e.target.closest('.chip'); if(!c)return;
+  filter=c.dataset.f;
+  document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===c));
+  render();
+});
+$('list').addEventListener('click',async e=>{
+  const btn=e.target.closest('[data-act]'); if(!btn)return;
+  const card=e.target.closest('.card'); const id=card.dataset.id;
+  const b=bills.find(x=>x.id===id); if(!b)return;
+  const act=btn.dataset.act;
+  if(act==='toggle'){b.paid=!b.paid;b.paidDate=b.paid?new Date().toISOString():null;await save();render();}
+  else if(act==='del'){if(confirm('Delete “'+b.name+'”?')){bills=bills.filter(x=>x.id!==id);await save();render();}}
+  else if(act==='edit'){openSheet(b);}
+});
+
+function openSheet(b){
+  editId=b?b.id:null;
+  $('sheetTitle').textContent=b?'Edit bill':'Add a bill';
+  $('fName').value=b?b.name:'';
+  $('fAmount').value=b?b.amount:'';
+  $('fDue').value=b?(b.due||''):'';
+  $('fCat').value=b?(b.category||'Other'):'Utilities';
+  $('fRepeat').value=b?(b.repeat||'monthly'):'monthly';
+  $('fNotes').value=b?(b.notes||''):'';
+  $('overlay').classList.add('show');
+  setTimeout(()=>$('fName').focus(),50);
+}
+function closeSheet(){$('overlay').classList.remove('show');editId=null;}
+
+$('addBtn').addEventListener('click',()=>openSheet(null));
+$('cancelBtn').addEventListener('click',closeSheet);
+$('overlay').addEventListener('click',e=>{if(e.target===$('overlay'))closeSheet();});
+$('saveBtn').addEventListener('click',async()=>{
+  const name=$('fName').value.trim();
+  if(!name){$('fName').focus();$('fName').style.borderColor='var(--over)';return;}
+  const data={
+    name,
+    amount:parseFloat($('fAmount').value)||0,
+    due:$('fDue').value||'',
+    category:$('fCat').value,
+    repeat:$('fRepeat').value,
+    notes:$('fNotes').value.trim()
+  };
+  if(editId){
+    const b=bills.find(x=>x.id===editId);
+    Object.assign(b,data);
+  }else{
+    bills.push({id:'b'+Date.now()+Math.random().toString(36).slice(2,6),paid:false,paidDate:null,...data});
+  }
+  await save();closeSheet();render();
+});
+$('fName').addEventListener('input',()=>$('fName').style.borderColor='');
+
+load();
+</script>
+</body>
+</html>
